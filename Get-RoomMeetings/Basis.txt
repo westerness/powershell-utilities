@@ -1,0 +1,21 @@
+$ExchangeDLL = "C:\Program Files\Microsoft\Exchange\Web Services\2.2\Microsoft.Exchange.WebServices.dll"
+Add-Type -Path $ExchangeDLL
+Import-Module $ExchangeDLL
+$EmailAccount = "Seriously?"
+$EWS = New-Object Microsoft.Exchange.WebServices.Data.ExchangeService([Microsoft.Exchange.WebServices.Data.ExchangeVersion]::Exchange2010_SP2)
+$EWS.UseDefaultCredentials = $False
+$oCredential = New-Object System.Net.NetworkCredential
+$oCredential.UserName = "calfetch"
+$oCredential.Password = "BadPlaintextCredentialsLetsFixThateh?"
+$EWS.Credentials = $oCredential
+$EWS.AutodiscoverUrl($EmailAccount,{$true})
+
+$currentlyImpersonating = "SOMETHING_HERE"
+$EWS.ImpersonatedUserId = New-Object Microsoft.Exchange.WebServices.Data.ImpersonatedUserId([Microsoft.Exchange.WebServices.Data.ConnectingIdType]::SmtpAddress,$currentlyImpersonating)
+$CalendarFolder = new-object Microsoft.Exchange.WebServices.Data.FolderId([Microsoft.Exchange.WebServices.Data.WellKnownFolderName]::Calendar,$currentlyImpersonating)
+$Calendar = [Microsoft.Exchange.WebServices.Data.Folder]::Bind($EWS,$CalendarFolder)
+
+$Today = Get-Date
+$CalendarView = New-Object Microsoft.Exchange.WebServices.Data.CalendarView($Today.Date.AddMonths(-1), $Today.Date.AddMonths(1))
+$myItems = $EWS.FindItems($CalendarFolder, $CalendarView)
+$myItems = $myItems | % { $_.Organizer = ([Microsoft.Exchange.WebServices.Data.Appointment]::Bind($EWS, $_.ID)).Organizer.Address }
